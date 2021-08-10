@@ -16,5 +16,5 @@ for f in Path(input_dir).rglob("*.jpg"):
 mean = running_stats[0] / running_stats[2]
 std = np.sqrt(running_stats[1] / running_stats[2] - mean**2)
 
-with open("image_stats.pkl", "wb") as f:
+with open("data/image_stats.pkl", "wb") as f:
     pickle.dump([float(mean), float(std)], f)
