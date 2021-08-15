@@ -11,7 +11,7 @@ from src.utils import get_stats
 
 
 input_dir = "data/data_train"
-outfile = "data/image_stats.pkl"
+outfile = "files/image_stats.pkl"
 
 n_cpu = cpu_count()
 res = Parallel(n_jobs=max(n_cpu-1, 1))(delayed(get_stats)(f) for f in Path(input_dir).rglob("*.jpg"))

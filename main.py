@@ -55,7 +55,7 @@ def main(results_path, network_config: dict, learningrate: int = 1e-3, batch_siz
     ds = ImageDS(p)
     
     # load mean and std
-    with open("data/image_stats.pkl", "rb") as f:
+    with open("files/image_stats.pkl", "rb") as f:
         mean, std = pickle.load(f)
 
     # Split dataset into training, validation, and test set randomly

@@ -9,8 +9,8 @@ from src.dataset import get_borders
 
 
 testset_dir = "data/data_test"
-outfile_dict = "data/my_testset_dict.pkl" # dictionary contains all relevant information about testset
-outfile = "data/my_testset.pkl" # file with identical structure to challenge testset
+outfile_dict = "files/my_testset_dict.pkl" # dictionary contains all relevant information about testset
+outfile = "files/my_testset.pkl" # file with identical structure to challenge testset
 
 
 testset_paths = sorted([str(p) for p in Path(testset_dir).rglob("*.jpg")])
