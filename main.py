@@ -35,10 +35,11 @@ def evaluate_model(model: torch.nn.Module, dataloader: torch.utils.data.DataLoad
             
             # Here we could clamp the outputs to the minimum and maximum values of inputs for better performance
             outputs = torch.clamp(outputs, img_min, img_max)
-            
+
             # Calculate mean mse loss over all samples in dataloader (accumulate mean losses in `loss`)
-            loss += (torch.stack([mse(output, target) for output, target in zip(outputs, targets)]).sum()
-                     / len(dataloader.dataset))
+            loss += torch.stack([mse(output, target) for output, target in zip(outputs, targets)]).sum()
+        loss /= len(dataloader.dataset)
+
     return loss
 
 
@@ -58,9 +59,8 @@ def main(results_path, network_config: dict, learningrate: int = 1e-3, batch_siz
         mean, std = pickle.load(f)
 
     # Split dataset into training, validation, and test set randomly
-    trainingset = torch.utils.data.Subset(ds, indices=np.arange(int(len(ds)*(3/5))))
-    validationset = torch.utils.data.Subset(ds, indices=np.arange(int(len(ds)*(3/5)),int(len(ds)*(4/5))))
-    testset = torch.utils.data.Subset(ds, indices=np.arange(int(len(ds)*(4/5)),len(ds)))
+    trainingset = torch.utils.data.Subset(ds, indices=np.arange(int(len(ds)*(4/5))))
+    validationset = torch.utils.data.Subset(ds, indices=np.arange(int(len(ds)*(4/5)),len(ds)))
 
     # Create datasets and dataloaders with rotated targets without augmentation (for evaluation)
     tf_eval = transforms.Compose([
@@ -69,10 +69,8 @@ def main(results_path, network_config: dict, learningrate: int = 1e-3, batch_siz
             ])
     trainingset_eval = BorderPredictionDS(dataset=trainingset, ds_stats = (mean, std), transform_chain=tf_eval, border_mode="fix")
     validationset = BorderPredictionDS(dataset=validationset, ds_stats = (mean, std), transform_chain=tf_eval, border_mode="fix")
-    testset = BorderPredictionDS(dataset=testset, ds_stats = (mean, std), transform_chain=tf_eval, border_mode="fix")
     trainloader = DataLoader(trainingset_eval, batch_size=1, shuffle=False, num_workers=0, collate_fn=my_collate)
     valloader = DataLoader(validationset, batch_size=1, shuffle=False, num_workers=0, collate_fn=my_collate)
-    testloader = DataLoader(testset, batch_size=1, shuffle=False, num_workers=0, collate_fn=my_collate)
     
     # Create datasets and dataloaders with rotated targets with augmentation (for training)
     tf_aug = transforms.Compose([
@@ -86,14 +84,9 @@ def main(results_path, network_config: dict, learningrate: int = 1e-3, batch_siz
     # Define a tensorboard summary writer that writes to directory "results_path/tensorboard"
     writer = SummaryWriter(log_dir=os.path.join(results_path, 'tensorboard'))
     
-    # Create Network
-    #cnn = CNNBase(n_in_channels=2, n_hidden_layers=4, n_kernels=64, kernel_size=7, batch_norm=True)
-    try:
-        network_config["batch_norm"] = bool(network_config["batch_norm"])
-    except KeyError:
-        pass
-    
+    # Create Network   
     cnn = CNNBase(**network_config)
+    #cnn = CNNBaseMulti(**network_config)
     net = BorderPredictionNet(cnn)
     net.to(device)
     
@@ -124,7 +117,7 @@ def main(results_path, network_config: dict, learningrate: int = 1e-3, batch_siz
             
             # Reset gradients
             optimizer.zero_grad()
-            
+
             # Get outputs for network
             outputs = net(inputs, mask)
             
@@ -161,6 +154,8 @@ def main(results_path, network_config: dict, learningrate: int = 1e-3, batch_siz
                 if best_validation_loss > val_loss:
                     best_validation_loss = val_loss
                     torch.save(net, os.path.join(results_path, 'best_model.pt'))
+                    with open(os.path.join(results_path, "best_validation_loss.txt"), "w") as f:
+                        f.write("Best validation loss: %s" % best_validation_loss)
             
             update_progess_bar.set_description(f"loss: {loss:7.5f}", refresh=True)
             update_progess_bar.update()
@@ -176,19 +171,16 @@ def main(results_path, network_config: dict, learningrate: int = 1e-3, batch_siz
     # Load best model and compute score on test set
     print(f"Computing scores for best model")
     net = torch.load(os.path.join(results_path, 'best_model.pt'))
-    test_loss = evaluate_model(net, dataloader=testloader, device=device, ds_stats=(mean, std))
     val_loss = evaluate_model(net, dataloader=valloader, device=device, ds_stats=(mean, std))
     train_loss = evaluate_model(net, dataloader=trainloader, device=device, ds_stats=(mean, std))
     
     print(f"Scores:")
-    print(f"test loss: {test_loss}")
     print(f"validation loss: {val_loss}")
     print(f"training loss: {train_loss}")
     
     # Write result to file
     with open(os.path.join(results_path, 'results.txt'), 'w') as fh:
         print(f"Scores:", file=fh)
-        print(f"test loss: {test_loss}", file=fh)
         print(f"validation loss: {val_loss}", file=fh)
         print(f"training loss: {train_loss}", file=fh)
 

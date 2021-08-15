@@ -1,3 +1,4 @@
+import dill as pickle
 from pathlib import Path
 import numpy as np
 import torch
@@ -73,7 +74,7 @@ class BorderPredictionDS(Dataset):
         self.get_mask_vals_(avg_border_size = 12)
 
         self.ds_mean, self.ds_std = ds_stats
-        self.ds_val_zero = - self.ds_mean / self.ds_std
+        # self.ds_val_zero = - self.ds_mean / self.ds_std
 
         norm = transforms.Normalize((self.ds_mean,), (self.ds_std,))
         transform_chain.transforms.insert(len(transform_chain.transforms), norm)
@@ -122,7 +123,7 @@ class BorderPredictionDS(Dataset):
         
         target_array = image_array[~mask]
 
-        image_array[~mask] = self.ds_val_zero
+        image_array[~mask] = 0 # self.ds_val_zero
         
         return torch.cat([image_array, known_array]), target_array, mask
     
@@ -151,7 +152,7 @@ class Testset(Dataset):
             
         self.get_mask_vals_(avg_border_size = 12)
         
-        self.ds_val_zero = - self.ds_mean / self.ds_std  
+        # self.ds_val_zero = - self.ds_mean / self.ds_std  
         
     def __len__(self):
         return len(self.data["input_arrays"])
@@ -160,9 +161,10 @@ class Testset(Dataset):
         
         input_array = self.data["input_arrays"][idx]
         mask = self.data["known_arrays"][idx]
-               
+        
+        mask = torch.tensor(mask, dtype=torch.bool)       
         input_array = self.transform(input_array).squeeze(0)
-        input_array[~mask] = self.ds_val_zero
+        input_array[~mask] = 0 # self.ds_val_zero
         known_array = torch.full_like(input_array, self.mask_val_zero)
         known_array[mask] = self.mask_val_one
         

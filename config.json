@@ -1,15 +1,1 @@
-{
-  "results_path": "results",
-  "device": "cuda:0",
-  "batch_size": 16,
-  "learningrate": 1e-3,
-  "weight_decay": 1e-5,
-  "n_updates": 5e4,
-  "network_config": {
-    "n_hidden_layers": 3,
-    "n_in_channels": 2,
-    "n_kernels": 64,
-    "kernel_size": 7,
-    "batch_norm": 0
-  }
-}
+{"results_path": "results", "device": "cuda:0", "batch_size": 16, "learningrate": 0.001, "weight_decay": 1e-05, "n_updates": 50000, "network_config": {"n_hidden_layers": 3, "n_in_channels": 2, "n_kernels": 64, "kernel_size": 7, "batch_norm": false}}
